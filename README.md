@@ -36,12 +36,13 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/yinian-clipboard-manager.git
+git clone https://github.com/aiyo868888-ux/yinian-clipboard-manager.git
 
 # 打开项目
 cd yinian-clipboard-manager
 
 # 使用 Android Studio 打开项目并构建
+# 或使用命令行构建: ./gradlew build
 ```
 
 ## 项目结构

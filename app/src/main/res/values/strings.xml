@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">一念剪贴板</string>
+    <string name="floating_window_permission_title">需要悬浮窗权限</string>
+    <string name="floating_window_permission_message">请授予悬浮窗权限以使用此功能</string>
+    <string name="floating_window_enabled">悬浮窗已启用</string>
+    <string name="floating_window_disabled">悬浮窗已禁用</string>
+</resources>

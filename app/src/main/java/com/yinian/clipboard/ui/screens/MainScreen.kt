@@ -12,11 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yinian.clipboard.data.ClipboardType
 import com.yinian.clipboard.ui.components.ClipboardList
 import com.yinian.clipboard.ui.components.EmptyState
 import com.yinian.clipboard.ui.viewmodel.MainViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 /**
  * 剪贴板主界面

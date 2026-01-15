@@ -13,8 +13,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.yinian.clipboard.export.DataExportServer
 import com.yinian.clipboard.export.QrCodeGenerator
-import com.google.zxing.client.android.Intents
-import dagger.hilt.android.scoped.ActivityRetained
 import timber.log.Timber
 
 /**

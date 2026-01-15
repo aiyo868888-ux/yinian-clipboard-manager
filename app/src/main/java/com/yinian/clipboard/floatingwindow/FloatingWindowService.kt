@@ -34,6 +34,9 @@ class FloatingWindowService : Service() {
     companion object {
         const val ACTION_SHOW = "com.yinian.clipboard.ACTION_SHOW"
         const val ACTION_HIDE = "com.yinian.clipboard.ACTION_HIDE"
+        const val ACTION_PERMISSION_REQUIRED = "com.yinian.clipboard.ACTION_PERMISSION_REQUIRED"
+        private const val CHANNEL_ID = "floating_window_channel"
+        private const val NOTIFICATION_ID = 1002
         var isRunning = false
             private set
     }
@@ -192,10 +195,5 @@ class FloatingWindowService : Service() {
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
-    }
-
-    companion object {
-        private const val CHANNEL_ID = "floating_window_channel"
-        private const val NOTIFICATION_ID = 1002
     }
 }

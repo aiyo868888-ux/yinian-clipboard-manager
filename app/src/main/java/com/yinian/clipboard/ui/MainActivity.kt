@@ -6,10 +6,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.appcompat.app.AppCompatActivity
@@ -76,9 +81,9 @@ fun MainNavigation(exportServer: DataExportServer) {
                         icon = {
                             Icon(
                                 imageVector = when (index) {
-                                    0 -> androidx.compose.material.icons.Icons.Default.Home
-                                    1 -> androidx.compose.material.icons.Icons.Default.Share
-                                    else -> androidx.compose.material.icons.Icons.Default.Settings
+                                    0 -> Icons.Default.Home
+                                    1 -> Icons.Default.Share
+                                    else -> Icons.Default.Settings
                                 },
                                 contentDescription = title
                             )

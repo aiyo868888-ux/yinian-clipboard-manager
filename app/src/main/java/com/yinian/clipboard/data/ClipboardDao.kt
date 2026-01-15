@@ -1,6 +1,5 @@
 package com.yinian.clipboard.data
 
-import androidx.paging.PagingSource
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
@@ -64,12 +63,6 @@ interface ClipboardDao {
      */
     @Query("SELECT * FROM clipboard_items ORDER BY created_at DESC")
     fun getAllByCreatedAt(): Flow<List<ClipboardEntity>>
-
-    /**
-     * 分页查询所有记录
-     */
-    @Query("SELECT * FROM clipboard_items ORDER BY created_at DESC")
-    fun pagingSource(): PagingSource<Int, ClipboardEntity>
 
     /**
      * 获取收藏的记录

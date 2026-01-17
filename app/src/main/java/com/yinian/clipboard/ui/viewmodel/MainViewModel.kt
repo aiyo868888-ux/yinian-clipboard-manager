@@ -16,6 +16,7 @@ import javax.inject.Inject
  */
 data class MainUiState(
     val clipboards: List<ClipboardEntity> = emptyList(),
+    val clipboardTags: Map<Long, List<TagEntity>> = emptyMap(), // clipboardId -> tags
     val tags: List<TagEntity> = emptyList(),
     val filteredClipboards: List<ClipboardEntity> = emptyList(),
     val selectedType: ClipboardType? = null,
@@ -50,8 +51,18 @@ class MainViewModel @Inject constructor(
             repository.getAllClipboards()
                 .catch { e -> _uiState.update { it.copy(error = e.message) } }
                 .collect { clipboards ->
+                    // 加载每个剪贴板的标签
+                    val tagsMap = mutableMapOf<Long, List<TagEntity>>()
+                    clipboards.forEach { clipboard ->
+                        val tags = repository.getTagsForClipboard(clipboard.id).first()
+                        tagsMap[clipboard.id] = tags
+                    }
+
                     _uiState.update { currentState ->
-                        currentState.copy(clipboards = clipboards)
+                        currentState.copy(
+                            clipboards = clipboards,
+                            clipboardTags = tagsMap
+                        )
                     }
                     applyFilters()
                 }
@@ -90,9 +101,8 @@ class MainViewModel @Inject constructor(
 
         // 标签筛选
         state.selectedTagId?.let { tagId ->
-            // 需要异步获取标签对应的剪贴板，这里简化处理
-            viewModelScope.launch {
-                repository.getTagsForClipboard(0).first() // 占位，实际需要遍历检查
+            filtered = filtered.filter { clipboard ->
+                state.clipboardTags[clipboard.id]?.any { it.id == tagId } == true
             }
         }
 
@@ -198,6 +208,8 @@ class MainViewModel @Inject constructor(
     fun addTagToClipboard(clipboardId: Long, tagId: Long) {
         viewModelScope.launch {
             repository.addTagToClipboard(clipboardId, tagId)
+            // 刷新标签映射
+            refreshClipboardTags(clipboardId)
         }
     }
 
@@ -207,6 +219,20 @@ class MainViewModel @Inject constructor(
     fun removeTagFromClipboard(clipboardId: Long, tagId: Long) {
         viewModelScope.launch {
             repository.removeTagFromClipboard(clipboardId, tagId)
+            // 刷新标签映射
+            refreshClipboardTags(clipboardId)
+        }
+    }
+
+    /**
+     * 刷新指定剪贴板的标签
+     */
+    private suspend fun refreshClipboardTags(clipboardId: Long) {
+        val tags = repository.getTagsForClipboard(clipboardId).first()
+        _uiState.update { currentState ->
+            currentState.copy(
+                clipboardTags = currentState.clipboardTags + mapOf(clipboardId to tags)
+            )
         }
     }
 

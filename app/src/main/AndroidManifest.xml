@@ -53,6 +53,44 @@
                 android:value="clipboard_monitor" />
         </service>
 
+        <!-- 悬浮窗前台服务 -->
+        <service
+            android:name=".floatingwindow.FloatingWindowService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="floating_window" />
+        </service>
+
+        <!-- 输入法服务（用于后台剪贴板监听） -->
+        <service
+            android:name=".ime.ClipboardInputMethodService"
+            android:label="@string/ime_label"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+        <!-- 辅助功能服务（用于后台剪贴板监听） -->
+        <service
+            android:name=".accessibility.ClipboardAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
     </application>
 
 </manifest>

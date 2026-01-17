@@ -5,34 +5,39 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.yinian.clipboard.data.ClipboardEntity
 import com.yinian.clipboard.data.ClipboardType
+import com.yinian.clipboard.floatingwindow.FloatingWindowService
 import com.yinian.clipboard.repository.ClipboardRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
 import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * 剪贴板监听前台服务
+ * 剪贴板数据缓存服务
+ *
+ * 功能说明：
+ * - 提供跨服务的线程安全数据缓存
+ * - 接收来自 AccessibilityService 的剪贴板更新
+ * - 接收来自 FloatingWindowService 的保存请求
+ *
+ * 注意：此服务不再主动监听剪贴板，监听功能由 ClipboardAccessibilityService 负责
  */
 @AndroidEntryPoint
 class ClipboardListenerService : Service() {
-
-    @Inject
-    lateinit var clipboardMonitor: SystemClipboardMonitor
 
     @Inject
     lateinit var repository: ClipboardRepository
@@ -41,17 +46,41 @@ class ClipboardListenerService : Service() {
     private val CHANNEL_ID = "clipboard_listener_channel"
     private val NOTIFICATION_ID = 1001
 
+    companion object {
+        // 缓存互斥锁（线程安全保护）
+        private val cacheMutex = Mutex()
+
+        // 缓存最新的剪贴板数据（不自动保存）
+        private var latestClipboardData: ClipboardData? = null
+
+        /**
+         * 获取缓存数据（线程安全）
+         */
+        @JvmStatic
+        fun getLatestClipboardData(): ClipboardData? = latestClipboardData
+
+        /**
+         * 更新缓存数据（线程安全）
+         * 注意：此方法可能被 AccessibilityService 从后台线程调用
+         */
+        @JvmStatic
+        fun setLatestClipboardData(data: ClipboardData?) {
+            // 使用简单的同步，不需要协程（避免阻塞 AccessibilityService）
+            synchronized(cacheMutex) {
+                latestClipboardData = data
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
 
-        // 开始监听剪贴板
-        clipboardMonitor.watchClipboard()
-            .onEach { data ->
-                handleNewClipboardData(data)
-            }
-            .launchIn(serviceScope)
+        // 注册保存广播接收器
+        registerSaveReceiver()
+
+        Timber.i("✅ 缓存服务已启动（由 AccessibilityService 更新缓存）")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -68,50 +97,68 @@ class ClipboardListenerService : Service() {
     }
 
     /**
-     * 处理新的剪贴板数据
+     * 注册保存广播接收器 - 接收广播携带的剪贴板内容
      */
-    private fun handleNewClipboardData(data: ClipboardData) {
-        serviceScope.launch {
+    private fun registerSaveReceiver() {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == FloatingWindowService.ACTION_SAVE_CLIPBOARD) {
+                    val text = intent.getStringExtra("text")
+
+                    Timber.i("========================================")
+                    Timber.i("📬 收到保存广播")
+
+                    if (text != null) {
+                        Timber.i("📋 广播中的剪贴板内容: ${text.take(50)}")
+
+                        // 直接使用广播中的数据创建 ClipboardData
+                        val data = ClipboardData(
+                            type = ClipboardDataType.TEXT,
+                            textContent = text
+                        )
+
+                        Timber.i("💾 开始保存...")
+                        saveClipboardManually(data)
+                    } else {
+                        Timber.w("❌ 广播中无剪贴板数据")
+                    }
+
+                    Timber.i("========================================")
+                }
+            }
+        }
+
+        val filter = IntentFilter(FloatingWindowService.ACTION_SAVE_CLIPBOARD)
+        registerReceiver(receiver, filter)
+    }
+
+    /**
+     * 手动保存剪贴板 - 极速版（直接保存，不检查重复）
+     */
+    private fun saveClipboardManually(data: ClipboardData) {
+        serviceScope.launch(Dispatchers.IO) {
             try {
-                // 1. 检查是否与最新记录重复
-                val latest = withContext(Dispatchers.IO) {
-                    repository.getAllClipboards().first().firstOrNull()
-                }
+                Timber.i("💾 开始保存...")
 
-                // 判断是否重复（内容相同且时间间隔小于2秒）
-                val isDuplicate = latest?.let { entity ->
-                    val isSameContent = when (data.type) {
-                        ClipboardDataType.TEXT -> entity.textContent == data.textContent
-                        ClipboardDataType.HTML -> entity.textContent == data.textContent
-                        ClipboardDataType.IMAGE -> entity.imageUri == data.imageUri?.toString()
-                    }
-                    val timeDiff = System.currentTimeMillis() - entity.createdAt
-                    isSameContent && timeDiff < 2000
-                } ?: false
+                // 直接保存，不做重复检查（避免超时）
+                val entity = ClipboardEntity(
+                    type = when (data.type) {
+                        ClipboardDataType.TEXT -> ClipboardType.TEXT
+                        ClipboardDataType.HTML -> ClipboardType.HTML
+                        ClipboardDataType.IMAGE -> ClipboardType.IMAGE
+                    },
+                    textContent = data.textContent,
+                    imageUri = data.imageUri?.toString()
+                )
 
-                if (!isDuplicate) {
-                    // 2. 转换为ClipboardEntity
-                    val entity = ClipboardEntity(
-                        type = when (data.type) {
-                            ClipboardDataType.TEXT -> ClipboardType.TEXT
-                            ClipboardDataType.HTML -> ClipboardType.HTML
-                            ClipboardDataType.IMAGE -> ClipboardType.IMAGE
-                        },
-                        textContent = data.textContent,
-                        imageUri = data.imageUri?.toString()
-                    )
+                repository.insertClipboard(entity)
 
-                    // 3. 插入数据库
-                    withContext(Dispatchers.IO) {
-                        repository.insertClipboard(entity)
-                    }
+                Timber.i("✅ 保存成功！")
+                Timber.i("========================================")
 
-                    Timber.d("保存剪贴板记录: ${data.textContent?.take(50)}...")
-                } else {
-                    Timber.d("跳过重复剪贴板记录")
-                }
             } catch (e: Exception) {
-                Timber.e(e, "保存剪贴板数据失败")
+                Timber.e(e, "❌ 保存失败")
+                Timber.i("========================================")
             }
         }
     }
@@ -123,10 +170,10 @@ class ClipboardListenerService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "剪贴板监听",
+                "剪贴板缓存",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "监听剪贴板变化"
+                description = "提供剪贴板数据缓存服务"
             }
 
             val notificationManager = getSystemService(NotificationManager::class.java)
@@ -147,8 +194,8 @@ class ClipboardListenerService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("剪贴板监听中")
-            .setContentText("正在监听剪贴板变化")
+            .setContentTitle("一念剪贴板")
+            .setContentText("剪贴板缓存服务运行中")
             .setSmallIcon(android.R.drawable.ic_menu_agenda)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

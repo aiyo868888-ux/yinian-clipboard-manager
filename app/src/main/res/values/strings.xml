@@ -5,4 +5,20 @@
     <string name="floating_window_permission_message">请授予悬浮窗权限以使用此功能</string>
     <string name="floating_window_enabled">悬浮窗已启用</string>
     <string name="floating_window_disabled">悬浮窗已禁用</string>
+
+    <!-- 输入法相关 -->
+    <string name="ime_method_id">com.yinian.clipboard.ime</string>
+    <string name="ime_label">一念剪贴板（后台监听）</string>
+    <string name="ime_subtype_label">后台剪贴板监听</string>
+
+    <!-- 辅助功能相关 -->
+    <string name="accessibility_service_description">一念剪贴板辅助功能：监听剪贴板变化，帮助您快速保存和管理剪贴板内容。\n\n权限说明：\n• 读取剪贴板内容（仅在复制时触发）\n• 不收集任何个人隐私数据\n• 所有数据仅存储在本地</string>
+    <string name="accessibility_permission_title">辅助功能权限</string>
+    <string name="accessibility_permission_required">需要辅助功能权限才能在后台监听剪贴板变化</string>
+    <string name="accessibility_permission_granted">✅ 已授权，剪贴板监听功能正常工作</string>
+    <string name="accessibility_permission_not_granted">⚠️ 需要授权才能在后台监听剪贴板变化</string>
+    <string name="accessibility_permission_button">前往授权</string>
+    <string name="accessibility_permission_help">为什么需要辅助功能权限？</string>
+    <string name="accessibility_permission_help_title">为什么需要辅助功能权限？</string>
+    <string name="accessibility_permission_help_text">Android 系统限制：从 Android 10 开始，系统禁止后台应用访问剪贴板，以保护您的隐私。\n\n我们的解决方案：使用辅助功能服务，可以在后台监听剪贴板变化，实现您点击悬浮窗即可保存内容的需求。\n\n隐私承诺：\n• 只在您复制内容时读取剪贴板\n• 不读取屏幕上的其他内容\n• 不收集您的个人数据\n• 所有数据仅存储在您的设备本地\n• 您可以随时在系统设置中撤销此权限</string>
 </resources>

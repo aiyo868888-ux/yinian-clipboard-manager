@@ -1,26 +1,64 @@
 package com.yinian.clipboard.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.yinian.clipboard.R
+import com.yinian.clipboard.accessibility.isAccessibilityServiceEnabled
+import com.yinian.clipboard.accessibility.openAccessibilitySettings
 import com.yinian.clipboard.floatingwindow.FloatingWindowManager
-import com.yinian.clipboard.floatingwindow.requestFloatingWindowPermission
 
 /**
- * 设置界面
+ * 设置界面 - 简化版
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val floatingWindowManager = remember { FloatingWindowManager(context) }
-    var hasPermission by remember { mutableStateOf(floatingWindowManager.hasPermission()) }
-    var isShowing by remember { mutableStateOf(floatingWindowManager.isShowing()) }
+
+    // 悬浮窗权限状态
+    var hasFloatingPermission by remember { mutableStateOf(floatingWindowManager.hasPermission()) }
+    var isFloatingShowing by remember { mutableStateOf(floatingWindowManager.isShowing()) }
+
+    // 辅助功能权限状态
+    var accessibilityGranted by remember {
+        mutableStateOf(isAccessibilityServiceEnabled(context))
+    }
+    var showAccessibilityHelp by remember { mutableStateOf(false) }
+
+    // 刷新所有状态
+    val refreshAllState = {
+        hasFloatingPermission = floatingWindowManager.hasPermission()
+        isFloatingShowing = floatingWindowManager.isShowing()
+        accessibilityGranted = isAccessibilityServiceEnabled(context)
+    }
+
+    // 监听生命周期，每次页面显示时刷新状态
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshAllState()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -40,19 +78,73 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 悬浮窗权限设置
+            // 辅助功能权限（核心）
             Card(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (accessibilityGranted)
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.errorContainer
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (accessibilityGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = if (accessibilityGranted) Color.Green else Color.Red
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.accessibility_permission_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+
                     Text(
-                        text = "悬浮窗设置",
-                        style = MaterialTheme.typography.titleMedium
+                        text = if (accessibilityGranted)
+                            stringResource(R.string.accessibility_permission_granted)
+                        else
+                            stringResource(R.string.accessibility_permission_not_granted),
+                        style = MaterialTheme.typography.bodyMedium
                     )
 
+                    if (!accessibilityGranted) {
+                        Button(
+                            onClick = { openAccessibilitySettings(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.accessibility_permission_button))
+                        }
+
+                        TextButton(
+                            onClick = { showAccessibilityHelp = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.accessibility_permission_help))
+                        }
+                    } else {
+                        TextButton(
+                            onClick = { refreshAllState() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("刷新状态")
+                        }
+                    }
+                }
+            }
+
+            // 悬浮窗权限（核心）
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("悬浮窗设置", style = MaterialTheme.typography.titleMedium)
                     Divider()
 
                     // 权限状态
@@ -63,8 +155,8 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                     ) {
                         Text("悬浮窗权限")
                         Text(
-                            text = if (hasPermission) "已授予" else "未授予",
-                            color = if (hasPermission) {
+                            text = if (hasFloatingPermission) "已授予" else "未授予",
+                            color = if (hasFloatingPermission) {
                                 MaterialTheme.colorScheme.primary
                             } else {
                                 MaterialTheme.colorScheme.error
@@ -72,13 +164,10 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    // 请求权限按钮
-                    if (!hasPermission) {
+                    if (!hasFloatingPermission) {
                         Button(
                             onClick = {
-                                (context as? AppCompatActivity)?.requestFloatingWindowPermission { granted ->
-                                    hasPermission = granted
-                                }
+                                context.startActivity(floatingWindowManager.requestPermission())
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -88,46 +177,84 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 
                     Divider()
 
-                    // 显示/隐藏悬浮窗
+                    // 悬浮窗开关
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("悬浮窗显示")
+                        Text("显示悬浮窗")
                         Switch(
-                            checked = isShowing,
+                            checked = isFloatingShowing,
                             onCheckedChange = {
-                                if (hasPermission) {
+                                if (hasFloatingPermission) {
                                     floatingWindowManager.toggleFloatingWindow()
-                                    isShowing = floatingWindowManager.isShowing()
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                        isFloatingShowing = floatingWindowManager.isShowing()
+                                    }, 500)
                                 }
                             },
-                            enabled = hasPermission
+                            enabled = hasFloatingPermission
                         )
+                    }
+
+                    // 提示信息
+                    if (!hasFloatingPermission) {
+                        Text(
+                            text = "⚠️ 请先授予悬浮窗权限",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else if (hasFloatingPermission && !accessibilityGranted) {
+                        Text(
+                            text = "⚠️ 请先授权辅助功能",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    // 刷新按钮
+                    if (hasFloatingPermission) {
+                        TextButton(
+                            onClick = { refreshAllState() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("刷新状态")
+                        }
                     }
                 }
             }
 
-            // 其他设置（占位）
+            // 使用说明
             Card(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("使用方法", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "其他设置",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "更多设置即将推出...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "1. 复制要保存的文本\n2. 点击悬浮窗即可保存\n3. 不影响当前输入法",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
         }
+    }
+
+    // 辅助功能帮助对话框
+    if (showAccessibilityHelp) {
+        AlertDialog(
+            onDismissRequest = { showAccessibilityHelp = false },
+            title = { Text(stringResource(R.string.accessibility_permission_help_title)) },
+            text = { Text(stringResource(R.string.accessibility_permission_help_text)) },
+            confirmButton = {
+                TextButton(onClick = { showAccessibilityHelp = false }) {
+                    Text("我明白了")
+                }
+            }
+        )
     }
 }

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#F5F5F5"
+    android:padding="8dp">
+
+    <!-- 顶部提示栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp"
+        android:background="#E3F2FD"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📋 一念剪贴板 - 输入法模式"
+            android:textColor="#1976D2"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_switch_ime"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="切换输入法"
+            android:textSize="12sp"
+            android:backgroundTint="#2196F3"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp" />
+    </LinearLayout>
+
+    <!-- 剪贴板内容预览 -->
+    <TextView
+        android:id="@+id/tv_clipboard_preview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="剪贴板内容将显示在这里"
+        android:textColor="#424242"
+        android:textSize="14sp"
+        android:padding="12dp"
+        android:background="#FFFFFF"
+        android:layout_marginBottom="4dp"
+        android:maxLines="3"
+        android:ellipsize="end" />
+
+    <!-- 提示信息 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="💡 保持此输入法激活，点击悬浮窗即可保存剪贴板内容\n需要打字时，点击上方按钮切换回原来的输入法"
+        android:textColor="#757575"
+        android:textSize="12sp"
+        android:padding="8dp" />
+
+</LinearLayout>
